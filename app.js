@@ -1,9 +1,14 @@
 const express = require('express');
-const { request } = require('express');
+const authenticator = require('./middleware/authenticator');
+const logger = require('./middleware/logger')
 const app = express();
 const PORT = 5000;
 
 app.use(express.json());
+
+app.use(authenticator);
+
+app.use(logger);
 
 let heroesArray = [
     { id: 1, name: 'Captain America' },
@@ -12,7 +17,7 @@ let heroesArray = [
 ];
 
 app.get('/', (req,res) => {
-    res.send("<h1 style='margin-top: 40px;'>Avengers Assemble!</h1>");
+    res.send("<h1 style='margin-top: 40px;text-align: center;'>Avengers Assemble!</h1>");
 })
 
 app.get('/api/heroes', (req,res) => {
@@ -63,17 +68,19 @@ app.put('/api/heroes/:heroId', (req,res) => {
 
 app.delete('/api/heroes/:heroId', (req,res) => {
     let heroId = parseInt(req.params.heroId);
-    let heroIndex = heroesArray.findIndex(hero => hero.id === heroId);
+    let hero = heroesArray.find(hero => hero.id === heroId);
 
-    if(!heroIndex) {
+    if(!hero) {
         res.status(404).send("The given id does not exist on our server");
     }
+
+    let heroIndex = heroesArray.indexOf(hero);
 
     heroesArray.splice(heroIndex,1); // param1: index param2: no of nodes
 
     console.log(heroesArray);
 
-    res.send(heroesArray);
+    res.send(hero);
 })
 
 app.listen(PORT, () => {
