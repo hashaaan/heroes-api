@@ -1,4 +1,5 @@
 const express = require('express');
+const Hero = require('../model/hero');
 const router = express.Router();
 
 let heroesArray = [
@@ -7,50 +8,73 @@ let heroesArray = [
     { id: 3, name: 'Black Widow' }
 ];
 
-router.get('/', (req,res) => {
-    res.send(heroesArray);
+router.get('/', async (req,res) => {
+    try {
+        // Hero.find({ deceased: true });
+        // Hero.find().skip(10).limit(20);
+        // Hero.find().sort({name:'desc'})
+        // Hero.find({ likeCount: { $nin: [3000, 10000] } })
+        // Hero.find().or([{ likeCount: 3000 }, { likeCount: 5000 }]) // should likeCount 3000 or 5000
+        let heroes = await Hero.find()
+            .or([{ likeCount: 3000 }, { likeCount: 5000 }])
+            .sort({name:'asc'})
+            .select({ name: 1, deceased: 1, likeCount: 1 })
+            //.countDocuments();
+        res.send(heroes);
+    } catch (e) {
+        return res.status(500).send(e.message);
+    }
 });
 
-router.get('/:heroId', (req,res) => {
-    let heroId = parseInt(req.params.heroId); //request params
-    //let optionalValue = req.query.showMore; // query params
-    let hero = heroesArray.find(hero => hero.id === heroId);
-    if(!hero) {
-        res.status(404).send("The given id does not exist on our server");
+router.get('/:heroId', async (req,res) => {
+
+    let heroId = req.params.heroId;
+
+    try {
+        let hero = await Hero.findById(heroId);
+        res.send(hero);
+    } catch(e) {
+        return res.status(500).send(e.message); 
     }
-    res.send(hero);
+
 });
 
-router.post('/', (req,res) => {
-    if(!req.body.name) {
-        return res.status(400).send("Not all mandatory values have been set!");
-    }
-    let newHeroObj = {
-        id: heroesArray.length + 1,
-        name: req.body.name,
-        age: req.body.age
-    }
-    heroesArray.push(newHeroObj);
-    res.send(newHeroObj);
-});
-
-router.put('/:heroId', (req,res) => {
-    let heroId = parseInt(req.params.heroId);
-    let hero = heroesArray.find(hero => hero.id === heroId);
-
-    if(!hero) {
-        res.status(404).send("The given id does not exist on our server");
-    }
-
-    if(!req.body.name) {
+router.post('/', async (req,res) => {
+    if(!req.body.heroName) {
         return res.status(400).send("Not all mandatory values have been set!");
     }
 
-    hero.name = req.body.name;
+    try {
+        let heroToBeAddedToDb = new Hero({
+            name: req.body.heroName,
+            birthname: req.body.birthName,
+            movies: req.body.movies,
+            likeCount: req.body.likeCount,
+            imgUrl: req.body.imgUrl,
+            deceased: req.body.deceased
+        })
 
-    console.log(heroesArray);
+        heroToBeAddedToDb = await heroToBeAddedToDb.save();
+        res.send(heroToBeAddedToDb);
+    } catch (e) {
+        return res.status(500).send(e.message);
+    }
 
-    res.send(hero);
+});
+
+router.put('/:heroId', async (req,res) => {
+
+    let heroId = req.params.heroId;
+
+    try {
+        let hero = await Hero.findById(heroId);
+        hero.set({ name: req.body.heroName });
+        hero = await hero.save();
+        res.send(hero);
+    } catch(e) {
+        return res.status(500).send(e.message); 
+    }
+
 });
 
 router.delete('/:heroId', (req,res) => {
